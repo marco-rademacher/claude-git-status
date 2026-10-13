@@ -1,0 +1,8 @@
+{
+  "name": "claude-git-status",
+  "owner": { "name": "Marco Rademacher" },
+  "description": "git-status, a Claude Code mod: changes and unpushed commits in a status line below the prompt.",
+  "plugins": [
+    { "name": "git-status", "source": "./", "description": "A status line below the prompt with the changes and unpushed commits of the session's git repository" }
+  ]
+}
