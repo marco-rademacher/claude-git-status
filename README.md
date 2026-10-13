@@ -17,6 +17,20 @@ It checks every five seconds and only locally: no `git fetch`, so the upstream i
 fetch or push. `git status` runs with `--no-optional-locks`, so it never leaves an `index.lock` in the
 way of your own git commands.
 
+## What it runs
+
+Everything happens on your machine, read-only. Every five seconds, for each repository it checks:
+
+- `git rev-list --count @{u}..HEAD` (or `<branch>@{u}..<branch>` when `branch` is set) — commits not yet
+  on the upstream
+- `git --no-optional-locks status --porcelain` — changed and untracked entries
+
+Once per working directory it also runs `git rev-parse --show-toplevel` to find the session's repository,
+lists that folder when `nestedRepos` is on, and reads `HOME` to expand `~` in `extraRepos`.
+
+It sends nothing anywhere, fetches nothing, writes no files and changes no settings; its only output is
+the status line.
+
 ## Install
 
 Mods need Claude Code 2.1.287 or later. At the prompt of a session:
