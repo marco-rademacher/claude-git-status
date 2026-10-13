@@ -41,6 +41,8 @@ A repository without an upstream counts as nothing to push.
 
 ## Notes
 
+- In the desktop app the line appears after your first message in a session: the app starts Claude
+  Code, and with it every mod, only then.
 - The app writes the plugin's name in front of the line; the `│` keeps the two apart.
 - The line has no colour: the status line takes plain text only (an ANSI code shows as raw characters
   in the desktop app).
