@@ -19,17 +19,40 @@ way of your own git commands.
 
 ## What it runs
 
-Everything happens on your machine, read-only. Every five seconds, for each repository it checks:
+Everything happens on your machine and only reads. The mod is one TypeScript hooks module
+(`hooks/register.ts`); the parts it uses of Claude Code's mod API are listed here.
 
-- `git rev-list --count @{u}..HEAD` (or `<branch>@{u}..<branch>` when `branch` is set) — commits not yet
-  on the upstream
-- `git --no-optional-locks status --porcelain` — changed and untracked entries
+### Programs
 
-Once per working directory it also runs `git rev-parse --show-toplevel` to find the session's repository,
-lists that folder when `nestedRepos` is on, and reads `HOME` to expand `~` in `extraRepos`.
+It runs one program, **`git`**, because git is the only reliable source for whether a repository has
+changes or commits its upstream lacks. It starts it through `$.process.run` with a fixed argument list,
+never through a shell. These are all the calls (`<repo>` is a repository path, `<range>` is
+`@{u}..HEAD`, or `<branch>@{u}..<branch>` when the `branch` setting is set):
 
-It sends nothing anywhere, fetches nothing, writes no files and changes no settings; its only output is
-the status line.
+| Command | When | Why |
+|---|---|---|
+| `git -C <cwd> rev-parse --show-toplevel` | once per working directory | find the session's repository |
+| `git -C <repo> rev-list --count <range>` | every five seconds, per repository | count commits not yet on the upstream |
+| `git --no-optional-locks -C <repo> status --porcelain` | every five seconds, per repository | count changed and untracked entries |
+
+No `git fetch`, no network access, no writes: none of these commands changes a repository.
+
+### Other calls
+
+- `$.clock.every(5000, …)` — the five-second tick, started once when the session starts
+- `$.session.cwd()` — the session's working directory
+- `$.fs.exists(<repo>/.git)` — every five seconds, per repository: skip a path that is no repository
+- `$.fs.list(<repo>)`, `$.fs.exists(…/.git)`, `$.fs.stat(…/.git)` — once per working directory, when
+  `nestedRepos` is on: list the repository's top folder and tell nested repositories (a `.git` folder)
+  from worktrees and submodules (a `.git` file)
+- `$.env.get("HOME")` — expand `~` in `extraRepos`
+
+### What it sends, and where
+
+Nothing leaves your machine. The mod's only output is `$.ui.status(text)`: Claude Code draws that text as
+this plugin's line below the prompt. The text holds the names of the repository folders and two counts,
+for example `ios: 3 changed · shared ↑2`. It writes no files, changes no settings and sends nothing to
+any server.
 
 ## Install
 
