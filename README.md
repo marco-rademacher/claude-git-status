@@ -4,14 +4,17 @@ A [Claude Code](https://claude.com/claude-code) mod that keeps one line below th
 whether your repository has loose ends:
 
 ```
-git-status │  up to date
-git-status │  unpushed: app ↑2
-git-status │  app: 3 changed · shared ↑1
+git-status │  up to date · main
+git-status │  unpushed: app main ↑4 (2 merges)
+git-status │  app feature/login: 3 changed · shared main ↑1
 ```
 
+- **the branch** after each repository's name — cut with … past 24 characters
 - **changed** — entries in `git status` (modified, staged, untracked)
 - **↑n** — commits on the branch that its upstream does not have yet
-- **up to date** — nothing changed, nothing to push
+- **(n merges)** — how many of those commits are merge commits: with a merge per finished task, the
+  tasks still waiting to be pushed
+- **up to date** — nothing changed, nothing to push; with the branch of the session's repository
 
 It checks every five seconds and only locally: no `git fetch`, so the upstream is as fresh as your last
 fetch or push. `git status` runs with `--no-optional-locks`, so it never leaves an `index.lock` in the
@@ -32,7 +35,9 @@ never through a shell. These are all the calls (`<repo>` is a repository path, `
 | Command | When | Why |
 |---|---|---|
 | `git -C <cwd> rev-parse --show-toplevel` | once per working directory | find the session's repository |
+| `git -C <repo> branch --show-current` | every five seconds, per repository | name the checked-out branch |
 | `git -C <repo> rev-list --count <range>` | every five seconds, per repository | count commits not yet on the upstream |
+| `git -C <repo> rev-list --count --merges <range>` | every five seconds, per repository | count the merge commits among them |
 | `git --no-optional-locks -C <repo> status --porcelain` | every five seconds, per repository | count changed and untracked entries |
 
 No `git fetch`, no network access, no writes: none of these commands changes a repository.
@@ -50,8 +55,8 @@ No `git fetch`, no network access, no writes: none of these commands changes a r
 ### What it sends, and where
 
 Nothing leaves your machine. The mod's only output is `$.ui.status(text)`: Claude Code draws that text as
-this plugin's line below the prompt. The text holds the names of the repository folders and two counts,
-for example `ios: 3 changed · shared ↑2`. It writes no files, changes no settings and sends nothing to
+this plugin's line below the prompt. The text holds the names of the repository folders, their branch
+names and counts, for example `ios feature/login: 3 changed · shared main ↑4 (2 merges)`. It writes no files, changes no settings and sends nothing to
 any server.
 
 ## Install

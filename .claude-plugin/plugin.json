@@ -1,6 +1,6 @@
 {
   "name": "git-status",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "A status line below the prompt with the changes and unpushed commits of the session's git repository — local only, no fetch.",
   "author": {
     "name": "Marco Rademacher"

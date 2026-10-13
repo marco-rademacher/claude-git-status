@@ -48,14 +48,18 @@ async function pathsFor($: EngineInterface, settings: Settings): Promise<string[
   return list
 }
 
+/** Every checked repository, clean ones included: the first is the session's, whose branch a clean line names. */
 async function measure($: EngineInterface, settings: Settings): Promise<Checkout[]> {
   const found: Checkout[] = []
+  const range = aheadRange(settings.branch)
   for (const path of await pathsFor($, settings)) {
     if (!(await $.fs.exists(`${path}/.git`))) continue
-    const c = readCheckout(repoName(path),
-      await output($, ['git', '-C', path, 'rev-list', '--count', aheadRange(settings.branch)]),
-      await output($, ['git', '--no-optional-locks', '-C', path, 'status', '--porcelain']))
-    if (c) found.push(c)
+    found.push(readCheckout(repoName(path), {
+      branch: await output($, ['git', '-C', path, 'branch', '--show-current']),
+      ahead: await output($, ['git', '-C', path, 'rev-list', '--count', range]),
+      merges: await output($, ['git', '-C', path, 'rev-list', '--count', '--merges', range]),
+      status: await output($, ['git', '--no-optional-locks', '-C', path, 'status', '--porcelain']),
+    }))
   }
   return found
 }
@@ -66,7 +70,7 @@ async function refresh($: EngineInterface, settings: Settings) {
   if (busy) return
   busy = true
   try {
-    $.ui.status(statusLine(await measure($, settings)))
+    $.ui.status(statusLine(await measure($, settings), settings.branch))
   } finally {
     busy = false
   }
