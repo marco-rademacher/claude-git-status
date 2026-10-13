@@ -1,0 +1,31 @@
+{
+  "name": "git-status",
+  "version": "1.0.0",
+  "description": "A status line below the prompt with the changes and unpushed commits of the session's git repository — local only, no fetch.",
+  "author": {
+    "name": "Marco Rademacher"
+  },
+  "license": "MIT",
+  "keywords": ["git", "status line", "unpushed", "mod"],
+  "userConfig": {
+    "branch": {
+      "type": "string",
+      "title": "Branch to compare",
+      "description": "Empty compares the current branch with its upstream. Name one (such as develop) to always compare that branch with its upstream, whatever is checked out.",
+      "default": ""
+    },
+    "nestedRepos": {
+      "type": "boolean",
+      "title": "Include nested repositories",
+      "description": "Also check folders directly inside the session's repository that are git repositories of their own (such as ios/ and android/).",
+      "default": false
+    },
+    "extraRepos": {
+      "type": "string",
+      "multiple": true,
+      "title": "Extra repositories",
+      "description": "Paths of further repositories to check in every session; ~ stands for your home folder.",
+      "default": []
+    }
+  }
+}
