@@ -5,19 +5,25 @@
 // `git status` runs with --no-optional-locks so it never takes an index.lock another git command of
 // the person's (or a parallel session's) would trip over.
 //
+// Every `$.process.run` carries its whole command as fixed text: the repository is the child's working
+// directory (`cwd`), and the revision range goes in on standard input (`rev-list --stdin`), so no
+// argument is put together at run time and the source shows exactly what runs.
+//
 // Learned in the desktop app (Claude Code 2.1.295): a label in the footer (`ui.render` on
 // `SessionMode`) is not drawn there, the status line is — with the plugin's name in front.
 
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, ProcessRunResult, Register } from 'claude-code'
 
 import { aheadRange, checkoutPaths, expandHome, readCheckout, repoName, settingsFrom, statusLine } from './line'
 import type { Checkout, Settings } from './line'
 
 const INTERVAL_MS = 5000
+const TIMEOUT_MS = 15000
 
-async function output($: EngineInterface, argv: string[]): Promise<string> {
+/** A git call's standard output, or '' when it failed: no repository, no upstream, killed. */
+async function output(run: () => Promise<ProcessRunResult>): Promise<string> {
   try {
-    const r = await $.process.run(argv, { timeoutMs: 15000 })
+    const r = await run()
     return r.exitCode === 0 ? r.stdout : ''
   } catch {
     return ''
@@ -31,7 +37,7 @@ async function pathsFor($: EngineInterface, settings: Settings): Promise<string[
   const cwd = await $.session.cwd()
   if (paths?.cwd === cwd) return paths.list
 
-  const top = (await output($, ['git', '-C', cwd, 'rev-parse', '--show-toplevel'])).trim() || null
+  const top = (await output(() => $.process.run(['git', 'rev-parse', '--show-toplevel'], { cwd, timeoutMs: TIMEOUT_MS }))).trim() || null
   const nested: string[] = []
   if (top && settings.nestedRepos) {
     // A nested repository has a .git folder of its own; a worktree or a submodule has a .git file and
@@ -51,14 +57,15 @@ async function pathsFor($: EngineInterface, settings: Settings): Promise<string[
 /** Every checked repository, clean ones included: the first is the session's, whose branch a clean line names. */
 async function measure($: EngineInterface, settings: Settings): Promise<Checkout[]> {
   const found: Checkout[] = []
-  const range = aheadRange(settings.branch)
+  const stdin = `${aheadRange(settings.branch)}\n`
   for (const path of await pathsFor($, settings)) {
     if (!(await $.fs.exists(`${path}/.git`))) continue
+    const at = { cwd: path, timeoutMs: TIMEOUT_MS }
     found.push(readCheckout(repoName(path), {
-      branch: await output($, ['git', '-C', path, 'branch', '--show-current']),
-      ahead: await output($, ['git', '-C', path, 'rev-list', '--count', range]),
-      merges: await output($, ['git', '-C', path, 'rev-list', '--count', '--merges', range]),
-      status: await output($, ['git', '--no-optional-locks', '-C', path, 'status', '--porcelain']),
+      branch: await output(() => $.process.run(['git', 'branch', '--show-current'], at)),
+      ahead: await output(() => $.process.run(['git', 'rev-list', '--count', '--stdin'], { ...at, stdin })),
+      merges: await output(() => $.process.run(['git', 'rev-list', '--count', '--merges', '--stdin'], { ...at, stdin })),
+      status: await output(() => $.process.run(['git', '--no-optional-locks', 'status', '--porcelain'], at)),
     }))
   }
   return found
