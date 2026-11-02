@@ -28,17 +28,18 @@ Everything happens on your machine and only reads. The mod is one TypeScript hoo
 ### Programs
 
 It runs one program, **`git`**, because git is the only reliable source for whether a repository has
-changes or commits its upstream lacks. It starts it through `$.process.run` with a fixed argument list,
-never through a shell. These are all the calls (`<repo>` is a repository path, `<range>` is
-`@{u}..HEAD`, or `<branch>@{u}..<branch>` when the `branch` setting is set):
+changes or commits its upstream lacks. Every call carries its whole command as fixed text and never goes
+through a shell: the repository is the child's working directory (`cwd`), and the revision range goes in
+on standard input (`rev-list --stdin`), so no argument is put together at run time. These are all the
+calls (`<range>` is `@{u}..HEAD`, or `<branch>@{u}..<branch>` when the `branch` setting is set):
 
 | Command | When | Why |
 |---|---|---|
-| `git -C <cwd> rev-parse --show-toplevel` | once per working directory | find the session's repository |
-| `git -C <repo> branch --show-current` | every five seconds, per repository | name the checked-out branch |
-| `git -C <repo> rev-list --count <range>` | every five seconds, per repository | count commits not yet on the upstream |
-| `git -C <repo> rev-list --count --merges <range>` | every five seconds, per repository | count the merge commits among them |
-| `git --no-optional-locks -C <repo> status --porcelain` | every five seconds, per repository | count changed and untracked entries |
+| `git rev-parse --show-toplevel` | once per working directory, in the session's working directory | find the session's repository |
+| `git branch --show-current` | every five seconds, in each repository | name the checked-out branch |
+| `git rev-list --count --stdin`, with `<range>` on standard input | every five seconds, in each repository | count commits not yet on the upstream |
+| `git rev-list --count --merges --stdin`, with `<range>` on standard input | every five seconds, in each repository | count the merge commits among them |
+| `git --no-optional-locks status --porcelain` | every five seconds, in each repository | count changed and untracked entries |
 
 No `git fetch`, no network access, no writes: none of these commands changes a repository.
 
